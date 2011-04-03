@@ -1,0 +1,2 @@
+RewriteEngine On
+RewriteRule ^(.*)$ http://localhost/zf_neo/public/$1
