@@ -12,42 +12,40 @@ class Admin_LoginController extends Zend_Controller_Action
     {
         $adminLoginForm = new Admin_Form_Login();
 
-        		$username = $adminLoginForm->createElement('text', 'username');
-        		$username->setRequired('true');
-                $username->addErrorMessage('Please enter valid username');
-                $adminLoginForm->addElement($username);
-                $this->view->username = $username;
+        $username = $adminLoginForm->createElement('text', 'username');
+        $username->setRequired('true');
+        $username->addErrorMessage('Please enter valid username');
+        $adminLoginForm->addElement($username);
+        $this->view->username = $username;
 
-                $password = $adminLoginForm->createElement('text', 'password');
-                $password->setRequired('true');
-                $password->addErrorMessage('Please enter valid password');
-                $adminLoginForm->addElement($password);
-                $this->view->password = $password;
+        $password = $adminLoginForm->createElement('password', 'password');
+        $password->setRequired('true');
+        $password->addErrorMessage('Please enter valid password');
+        $adminLoginForm->addElement($password);
+        $this->view->password = $password;
 
-                $submit = $adminLoginForm->createElement('submit', 'Submit');
-                $this->view->submit = $submit;
+        $submit = $adminLoginForm->createElement('submit', 'Submit');
+        $this->view->submit = $submit;
 
-                if ($this->_request->isPost()) {
-        			if ($adminLoginForm->isValid($_POST)) {
-                        $adminUserModel = new Admin_Model_User();
-                        $userExists = $adminUserModel->userExists(
-                            $adminLoginForm->getValue('username'),
-                            $adminLoginForm->getValue('password')
-                        );
-        				if ($userExists == true) {
-                            $_SESSION['username'] = $adminLoginForm->getValue('username');
-                            $this->_redirect('/admin/index/index');
-                        }
-
-        			}
-        		}
+        if ($this->_request->isPost() && $adminLoginForm->isValid($_POST)) {
+            $db = Zend_Db_Table::getDefaultAdapter();
+            $authAdapter = new Zend_Auth_Adapter_DbTable($db, 'users', 'username', 'password');
+            $authAdapter->setIdentity($adminLoginForm->getValue('username'));
+            $authAdapter->setCredential(md5($adminLoginForm->getValue('password')));
+            $result = $authAdapter->authenticate();
+            if ($result->isValid()) {
+                $auth = Zend_Auth::getInstance();
+                $auth->getStorage()->write($authAdapter->getResultRowObject(array('username', 'role')));
+                $this->_redirect('/admin/index/index');
+            }
+        }
     }
 
     public function logoutAction()
     {
-        $_SESSION['username'] = '';
+        $authAdapter = Zend_Auth::getInstance();
+        $authAdapter->clearIdentity();
         $this->_redirect('/admin/login/index');
-
     }
 
 
